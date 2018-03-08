@@ -46,6 +46,61 @@ package common is
       segs : out std_logic_vector(7 downto 0)    -- codigo 7-segmentos
     );
   end component;
+  
+  -- Sincroniza una entrada binaria
+  component synchronizer
+	  generic (
+		 STAGES  : in natural;      -- número de biestables del sincronizador
+		 INIT    : in std_logic     -- valor inicial de los biestables 
+	  );
+	  port (
+		 rst_n : in  std_logic;   -- reset asíncrono de entrada (a baja)
+		 clk   : in  std_logic;   -- reloj del sistema
+		 x     : in  std_logic;   -- entrada binaria a sincronizar
+		 xSync : out std_logic    -- salida sincronizada que sique a la entrada
+	  );
+	end component;
+	
+	-- Elimina los rebotes de una línea binaria mediante la espera 
+	-- tras cada flanco detectado
+	component debouncer
+	  generic(
+		 FREQ   : natural;  -- frecuencia de operacion en KHz
+		 BOUNCE : natural   -- tiempo de rebote en ms
+	  );
+	  port (
+		 rst_n  : in  std_logic;   -- reset asíncrono del sistema (a baja)
+		 clk    : in  std_logic;   -- reloj del sistema
+		 x_n    : in  std_logic;   -- entrada binaria a la que deben eliminarse los rebotes (a baja en reposo)
+		 xdeb_n : out std_logic    -- salida que sique a la entrada pero sin rebotes
+	  );
+	end component;
+	
+	-- Detecta flancos en una entrada binaria lenta
+	component edgeDetector
+	  port (
+		 rst_n : in  std_logic;   -- reset asíncrono del sistema (a baja)
+		 clk   : in  std_logic;   -- reloj del sistema
+		 x_n   : in  std_logic;   -- entrada binaria con flancos a detectar (a baja en reposo)
+		 xFall : out std_logic;   -- se activa durante 1 ciclo cada vez que detecta un flanco de subida en x
+		 xRise : out std_logic    -- se activa durante 1 ciclo cada vez que detecta un flanco de bajada en x
+	  );
+	end component;
+	
+	-- Genera una señal de reloj de cierta frecuencia
+	component frequencySynthesizer
+	  generic (
+		 FREQ     : natural;                 -- frecuencia del reloj de entrada en KHz
+		 MODE     : string;                  -- modo del sintetizador de frecuencia "LOW" o "HIGH"
+		 MULTIPLY : natural range 2 to 32;   -- factor por el que multiplicar la frecuencia de entrada 
+		 DIVIDE   : natural range 1 to 32    -- divisor por el que dividir la frecuencia de entrada
+	  );
+	  port (
+		 clkIn  : in  std_logic;   -- reloj de entrada
+		 ready  : out std_logic;   -- indica si el reloj de salida es válido
+		 clkOut : out std_logic    -- reloj de salida
+	  );
+	end component;
  
 end package common;
 
