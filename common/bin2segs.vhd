@@ -36,7 +36,7 @@ end bin2segs;
 architecture syn of bin2segs is
 begin 
 
-  segs(7) <= '0'; 
+  segs(7) <= dp; 
   with bin select
     segs(6 downto 0) <= 
       "1111110" when X"0",
