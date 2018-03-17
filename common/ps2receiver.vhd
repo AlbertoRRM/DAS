@@ -47,15 +47,15 @@ architecture syn of ps2Receiver is
 begin
 
   ps2ClkSynchronizer : synchronizer
-    generic map ( ... )
-    port map ( ... );
+    generic map ( STAGES => 2, INIT => '1' )
+    port map ( rst_n => rst_n, clk => clk, x => ps2Clk, xSync => ps2ClkSync );
     
   ps2DataSynchronizer : synchronizer
-    generic map ( ... )
-    port map ( ... );
+    generic map ( STAGES => 2, INIT => '1' )
+    port map ( rst_n => rst_n, clk => clk, x => ps2Data, xSync => ps2DataSync );
     
   ps2ClkEdgeDetector : edgeDetector
-    port map ( ... );
+    port map ( rst_n => rst_n, clk => clk, x_n => ps2ClkSync, xFall => ps2ClkFall, xRise => open );
     
   ps2DataShifter:
   process (rst_n, clk)
@@ -63,15 +63,24 @@ begin
     if rst_n='0' then
       ps2DataShf <= (others =>'1');    
     elsif rising_edge(clk) then
-      ...
+      if ps2ClkFall='1' then
+			if lastBit='0' then
+				ps2DataShf <= (others=>'1');
+			else
+				ps2DataShf <= ps2DataSync & ps2DataShf(10 to 1);
+			end if;
+		end if;
     end if;
   end process;
 
   oddParityCheker :
-  parityOK <= ...;
-
+  parityOK <= 0;
+  for i in 1 to 9 loop
+		 parityOK <= parityOK xor ps2DataShf(i);
+  end loop;
+ 
   lastBitCheker :
-  lastBit <= ...;  
+  lastBit <= not ps2DataShf(10);  
   
   outputRegisters:
   if REGOUTPUTS generate
@@ -81,15 +90,18 @@ begin
         dataRdy <= '0';
         data <= (others=>'0');
       elsif rising_edge(clk) then
-        ...
+        if parityOK and lastBit then 
+			 data <= ps2DataShf(9 downto 1);
+		  end if;
+		  dataRdy <= not (parityOK and lastBit);
       end if;
     end process;
   end generate;
  
   outputSignals:
   if not REGOUTPUTS generate
-    dataRdy <= ...;
-    data    <= ...;
+    dataRdy <= parityOK and lastBit;
+    data    <= ps2DataShf(9 downto 1);
   end generate;
 
 end syn;

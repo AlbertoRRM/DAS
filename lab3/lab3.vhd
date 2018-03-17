@@ -59,7 +59,7 @@ begin
   ------------------
 
   enterSynchronizer : synchronizer
-    generic map ( STAGES => 2, INIT => '0' )
+    generic map ( STAGES => 2, INIT => '1' )
     port map ( rst_n => rst_n, clk => clk, x => enter_n, xSync => enterSync_n );
 
   enterDebouncer : debouncer
@@ -74,7 +74,7 @@ begin
   begin
     switchsynchronizer : synchronizer
       generic map ( STAGES => 2, INIT => '0' )
-      port map ( rst_n => rst_n, clk => clk, x => switches_n(i downto 0), xSync => switchesSync_n(i downto 0) );
+      port map ( rst_n => rst_n, clk => clk, x => switches_n(i), xSync => switchesSync_n(i) );
   end generate;
 
   ------------------
@@ -84,15 +84,18 @@ begin
     type states is (initial, S3, S2, S1, S0);
     variable state: states;
   begin
-    if enterFall = HIGH and state = initial then
+  
+    if enterFall = '1' and state = initial then
       ldCode <= '1';
     else
       ldCode <= '0';
+	 end if;
     if state = initial then
       lock <= '0';
     else
       lock <= '1';
     end if;
+	 
     case state is
       when initial =>
         tries <= "1010"; -- A
@@ -105,28 +108,35 @@ begin
 		when S0 =>
         tries <= "1100"; -- C
     end case;
+	 
     if rst_n='0' then
       state := initial;
     elsif rising_edge(clk) then
       case state is
         when initial =>
           if enterFall = '1' then
-            state <= S3;
+            state := S3;
+			 end if;
         when S3 =>
           if enterFall = '1' and eq = '0' then
-            state <= S2;
+            state := S2;
           elsif enterFall = '1' and eq = '1' then
-            state <= initial;
+            state := initial;
+			 end if;
         when S2 =>
           if enterFall = '1' and eq = '0' then
-            state => S1;
+            state := S1;
           elsif enterFall = '1' and eq = '1' then
-            state <= initial;
+            state := initial;
+			 end if;
         when S1 =>
           if enterFall = '1' and eq = '0' then
-            state <= S0;
+            state := S0;
           elsif enterFall = '1' and eq = '1' then
-            state = initial;
+            state := initial;
+			 end if;
+			when S0 =>
+			
       end case;
     end if;
   end process;
@@ -137,15 +147,22 @@ begin
     if rst_n='0' then
       code <= (others=>'0');
     elsif rising_edge(clk) then
-      code <= switchesSync_n;
+		if ldCode='1' then
+			code <= switchesSync_n;
+		end if;
+	 end if;
   end process;
 
   comparator:
-  eq <= switchesSync_n and code;
+  eq <=
+    '1' when switchesSync_n=code else
+    '0'; 
 
   rigthConverter : bin2segs
     port map( bin => tries, dp => NO, segs => upSegs );
 
-  leds <= lock;
+  leds <= 
+	(others=>'1') when lock='1' else
+	(others=>'0');
 
 end syn;
