@@ -50,13 +50,13 @@ begin
   process (rst_n, clk)
   begin
     if rst_n = '0' then
-      cs <= 0;
+      cs <= (others => '0');
     elsif rising_edge(clk) then
       if clear = '1' then
-        cs <= 0;
-      elsif clear = '0' then
+        cs <= (others => '0');
+      elsif ce = '1' then
         if cs = MAXVALUE then
-          cs <= 0;
+          cs <= (others => '0');
         else 
           cs <= cs + 1;
         end if;
@@ -64,10 +64,10 @@ begin
     end if;
   end process;
 
-  count <= cs;
+  count <= std_logic_vector(cs);
   
   tc <= 
-    '1' when ce && (cs = MAXVALUE) else
+    '1' when (ce='1' and cs=MAXVALUE) else
     '0'; 
 
 end syn;
